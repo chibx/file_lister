@@ -1,18 +1,15 @@
 package utils
 
 import (
-	"fmt"
 	"lister/structs"
 )
 
-func StartScan(config *structs.Config) {
+func StartScan(config *structs.Config) *structs.FileTree {
 	dir := CheckDir(config.EntryPoint)
-
-	// for _, data := range dir {
-	// 	fmt.Println(data.Name())
-	// }
 
 	ftree := parseToFileTree(config, config.EntryPoint, dir, 0)
 
-	fmt.Println(ftree)
+	// fmt.Println(ftree)
+
+	return ftree
 }

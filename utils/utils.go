@@ -99,8 +99,10 @@ func parseToFileTree(config *structs.Config, curDir string, dir []os.DirEntry, d
 				PrintAndExit(fmt.Sprint("Error occurred while reading into directory", dirToEnter), 1)
 			}
 			// time.Sleep(time.Second)
-			time.Sleep(time.Millisecond * time.Duration(config.Sleep))
-			ft.Folders = append(ft.Folders, *parseToFileTree(config, dirToEnter, _dir, depth+1))
+			if config.MaxDepth == -1 || depth <= config.MaxDepth {
+				time.Sleep(time.Millisecond * time.Duration(config.Sleep))
+				ft.Folders = append(ft.Folders, *parseToFileTree(config, dirToEnter, _dir, depth+1))
+			}
 		} else {
 			if slices.Contains(config.IncludeFiles, -1) {
 				ft.Files = append(ft.Files, data.Name())

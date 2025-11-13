@@ -1,6 +1,7 @@
 package main
 
 import (
+	"lister/emitter"
 	"lister/utils"
 	"os"
 )
@@ -15,5 +16,7 @@ func main() {
 
 	// fmt.Println(config)
 
-	utils.StartScan(config)
+	ftree := utils.StartScan(config)
+
+	emitter.EmitOutput(config, ftree)
 }

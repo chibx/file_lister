@@ -11,14 +11,14 @@ type Config struct {
 	// How many folders deep
 	//
 	// Defaults to -1 for all. 0 returns nothing or just files if the IncludeFiles option is true
-	Depth  int
-	DumpAs string
-	Cwd    string
+	MaxDepth int
+	DumpAs   string
+	Cwd      string
 	// MaxConcurrency int16 // Unimplemented
 }
 
 type FileTree struct {
 	Name    string     `json:"name"` // Folder name
-	Folders []FileTree `json:"dirs"`
-	Files   []string   `json:"files"`
+	Folders []FileTree `json:"dirs,omitempty"`
+	Files   []string   `json:"files,omitempty"`
 }

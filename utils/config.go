@@ -32,12 +32,12 @@ func CreateConfig(parsedArg Args) *structs.Config {
 	var dumpAs = parseFormat(parsedArg)
 
 	return &structs.Config{
-		Output:       output,
-		Sleep:        sleep,
+		Output:       output, // -o
+		Sleep:        sleep,  // --delay
 		EntryPoint:   entryName,
-		IncludeFiles: includeFiles,
-		DumpAs:       dumpAs,
-		Depth:        depth,
+		IncludeFiles: includeFiles, // --fl
+		DumpAs:       dumpAs,       // -f
+		MaxDepth:     depth,        // -d
 		Cwd:          cwd,
 	}
 }
@@ -45,7 +45,7 @@ func CreateConfig(parsedArg Args) *structs.Config {
 func parseFormat(parsedArg Args) string {
 	var dumpAs = defaultOutFormat
 
-	if format, ok := parsedArg["-o"]; ok {
+	if format, ok := parsedArg["-f"]; ok {
 		if slices.Contains(SupportedFormats, format) {
 			dumpAs = format
 		}
@@ -83,18 +83,18 @@ func parseDelay(parsedArg Args) int {
 func parseIncludes(parsedArg Args) []int {
 	var includeFiles = defaultFileLevel
 
-	if _inc, ok := parsedArg["--include-files"]; ok {
+	if _inc, ok := parsedArg["--fl"]; ok {
 		include, err := ParseToIntList(_inc)
 
 		if err != nil {
 			fmt.Println("Error:", err.Error(),
-				"due to issue with input provided to --include-files, I got", _inc, "instead\n",
+				"due to issue with input provided to --fl, I got", _inc, "instead\n",
 				"Continuing with default...")
 
 			include = make([]int, 0) // Empty slice of levels to include
 		}
 
-		if slices.Contains(include, -1) {
+		if slices.Contains(include, -1) && len(include) > 1 {
 			include = defaultFileLevel // Avoid mixing -1 with other levels
 		}
 
