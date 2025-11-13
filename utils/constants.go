@@ -3,7 +3,7 @@ package utils
 const PREFIX = "-"
 const defaultOutput = "out.txt"
 const defaultDepth = -1
-const defaultSleep = 5 // Time in Milliseconds
-const defaultOutFormat = "text"
+const defaultSleep = 0 // Time in Milliseconds
+const defaultOutFormat = "json"
 
-var defaultFileLevel = append(make([]int, 0), 0) // make([]int, 1) does the same thing, just felt this was explicit
+var defaultFileLevel = append(make([]int, 0), -1) // All files will be emitted

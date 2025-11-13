@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"lister/structs"
 	"math"
 	"os"
 	"path/filepath"
@@ -10,33 +11,63 @@ import (
 	"strings"
 )
 
-type Config struct {
-	Sleep      int
-	Output     string // Without extension
-	EntryPoint string
-	// If files should be included, -1 = all levels, 0 = none, 1 = depth one, and so on....
-	//
-	// This depends on the depth level of course
-	IncludeFiles []int
-	// How many folders deep
-	//
-	// Defaults to -1 for all. 0 returns nothing or just files if the IncludeFiles option is true
-	Depth  int
-	DumpAs string
-}
+type Args = map[string]string
 
-func CreateConfig(parsedArg map[string]string) *Config {
-	var output string = defaultOutput
-	var sleep = defaultSleep
-	var includeFiles = defaultFileLevel
-	var entryName = ""
-	var dumpAs = defaultOutFormat
-	var depth = defaultDepth
-
-	if outFile, ok := parsedArg["-o"]; ok {
-		output = outFile
+func getcwd() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		PrintAndExit("Error occurred while getting working directory", 1)
 	}
 
+	return cwd
+}
+
+func CreateConfig(parsedArg Args) *structs.Config {
+	var cwd = getcwd()
+	var output = parseOutput(parsedArg)
+	var sleep = parseDelay(parsedArg)
+	var includeFiles = parseIncludes(parsedArg)
+	var entryName = parseEntry(parsedArg)
+	var depth = parseDepth(parsedArg)
+	var dumpAs = parseFormat(parsedArg)
+
+	return &structs.Config{
+		Output:       output,
+		Sleep:        sleep,
+		EntryPoint:   entryName,
+		IncludeFiles: includeFiles,
+		DumpAs:       dumpAs,
+		Depth:        depth,
+		Cwd:          cwd,
+	}
+}
+
+func parseFormat(parsedArg Args) string {
+	var dumpAs = defaultOutFormat
+
+	if format, ok := parsedArg["-o"]; ok {
+		if slices.Contains(SupportedFormats, format) {
+			dumpAs = format
+		}
+	}
+
+	return dumpAs
+}
+
+func parseOutput(parsedArg Args) string {
+	var output string = defaultOutput
+	if outFile, ok := parsedArg["-o"]; ok {
+		if !filepath.IsAbs(outFile) {
+			outFile = filepath.Join(getcwd(), outFile)
+		}
+		output = filepath.Clean(outFile)
+	}
+
+	return output
+}
+
+func parseDelay(parsedArg Args) int {
+	var sleep = defaultSleep
 	if del, ok := parsedArg["--delay"]; ok {
 		delay, err := strconv.Atoi(del)
 		if err != nil {
@@ -46,41 +77,56 @@ func CreateConfig(parsedArg map[string]string) *Config {
 		sleep = int(math.Max(float64(delay), 0))
 	}
 
-	if e, ok := parsedArg["0"]; ok {
-		entryName = filepath.Clean(strings.TrimSpace(e))
-		cwd, err := os.Getwd()
-		if err != nil {
-			fmt.Println("Error occurred while accessing working directory")
-			os.Exit(1)
-		}
+	return sleep
+}
 
-		if !filepath.IsAbs(entryName) {
-			entryName = filepath.Join(cwd, entryName)
-		}
-
-		if len(entryName) == 0 {
-			fmt.Println("Invalid filepath suggested as the entry")
-			os.Exit(1)
-		}
-	} else {
-		fmt.Println("No Entry Folder Specified!")
-		os.Exit(1)
-	}
+func parseIncludes(parsedArg Args) []int {
+	var includeFiles = defaultFileLevel
 
 	if _inc, ok := parsedArg["--include-files"]; ok {
 		include, err := ParseToIntList(_inc)
 
 		if err != nil {
-			fmt.Println("Error:", err.Error(), "due to issue with input provided to --include-files, I got", _inc, "instead")
+			fmt.Println("Error:", err.Error(),
+				"due to issue with input provided to --include-files, I got", _inc, "instead\n",
+				"Continuing with default...")
+
+			include = make([]int, 0) // Empty slice of levels to include
 		}
 
-		if slices.Contains(include, 0) {
-			include = defaultFileLevel
+		if slices.Contains(include, -1) {
+			include = defaultFileLevel // Avoid mixing -1 with other levels
 		}
 
 		includeFiles = include
 
 	}
+
+	return includeFiles
+}
+
+func parseEntry(parsedArg Args) string {
+	var entryName = ""
+
+	if e, ok := parsedArg["0"]; ok {
+		entryName = filepath.Clean(strings.TrimSpace(e))
+
+		if !filepath.IsAbs(entryName) {
+			entryName = filepath.Join(getcwd(), entryName)
+		}
+
+		if len(entryName) == 0 {
+			PrintAndExit("Invalid filepath suggested as the entry", 1)
+		}
+	} else {
+		PrintAndExit("No Entry Folder Specified!", 1)
+	}
+
+	return entryName
+}
+
+func parseDepth(parsedArg Args) int {
+	var depth = defaultDepth
 
 	if _dep, ok := parsedArg["-d"]; ok {
 		dep, err := strconv.Atoi(_dep)
@@ -89,18 +135,11 @@ func CreateConfig(parsedArg map[string]string) *Config {
 		}
 
 		if dep < -1 {
-			fmt.Println("Accepted -d (Depth) values must be from -1 up")
+			PrintAndExit("Accepted -d (Depth) values must be from -1 up", 1)
 		}
 
 		depth = dep
 	}
 
-	return &Config{
-		Output:       output,
-		Sleep:        sleep,
-		EntryPoint:   entryName,
-		IncludeFiles: includeFiles,
-		DumpAs:       dumpAs,
-		Depth:        depth,
-	}
+	return depth
 }

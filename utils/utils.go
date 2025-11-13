@@ -3,10 +3,21 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"lister/structs"
 	"os"
+	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
+	"time"
 )
+
+var SupportedFormats = []string{"text", "json"}
+
+func PrintAndExit(error string, code int) {
+	fmt.Println(error)
+	os.Exit(code)
+}
 
 // Parses keys duhhhh
 func ParseValues(args []string) map[string]string {
@@ -31,8 +42,7 @@ func ParseValues(args []string) map[string]string {
 		} else {
 			// This handles non-param values but only ensures there is one in this case
 			if a, ok := params["0"]; ok {
-				fmt.Println("Invalid parameter", params["0"], "\nI got", a)
-				os.Exit(1)
+				PrintAndExit(fmt.Sprint("Invalid parameter", params["0"], "\nI got", a), 1)
 			}
 
 			params["0"] = curItem
@@ -68,12 +78,37 @@ func CheckDir(name string) []os.DirEntry {
 	dir, err := os.ReadDir(name)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			fmt.Println("Specified Entrypoint does not exist!")
+			PrintAndExit("Specified Entrypoint does not exist!", 1)
 		} else {
-			fmt.Println(err)
+			PrintAndExit(err.Error(), 1)
 		}
-		os.Exit(1)
 	}
 
 	return dir
+}
+
+func parseToFileTree(config *structs.Config, curDir string, dir []os.DirEntry, depth int) *structs.FileTree {
+	ft := new(structs.FileTree)
+	ft.Name = filepath.Base(curDir)
+
+	for _, data := range dir {
+		if data.IsDir() {
+			dirToEnter := filepath.Join(curDir, data.Name())
+			_dir, err := os.ReadDir(dirToEnter)
+			if err != nil {
+				PrintAndExit(fmt.Sprint("Error occurred while reading into directory", dirToEnter), 1)
+			}
+			// time.Sleep(time.Second)
+			time.Sleep(time.Millisecond * time.Duration(config.Sleep))
+			ft.Folders = append(ft.Folders, *parseToFileTree(config, dirToEnter, _dir, depth+1))
+		} else {
+			if slices.Contains(config.IncludeFiles, -1) {
+				ft.Files = append(ft.Files, data.Name())
+			} else if slices.Contains(config.IncludeFiles, depth) {
+				ft.Files = append(ft.Files, data.Name())
+			}
+		}
+	}
+
+	return ft
 }
